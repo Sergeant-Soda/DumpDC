@@ -1,0 +1,19 @@
+<job>
+<script language="JScript" src="Lib_CommonGPMCFunctions.js"/>
+<script language="VBScript">
+
+Dim GPM			: Set GPM = CreateObject("GPMgmt.GPM")
+Dim Constants	: Set Constants = GPM.GetConstants()
+
+</script>
+<runtime>
+<description>
+Determines if the group policy management console has been installed.
+</description>
+
+<example>
+Example: GPOTest.wsf
+</example>
+</runtime>
+
+</job>
