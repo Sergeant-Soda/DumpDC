@@ -16,12 +16,13 @@ echo This batch file will gather all of the current group policies and password
 echo hashes for the current domain.  It will place this into a single file when
 echo it is finished running.
 echo.
-echo Running DUMPIT may temporarily deviate standard system performance.
+echo It is recommended to run DumpDC on a Domain Controller with Domain Administrator privileges.
+echo Additionally, running DumpDC may temporarily deviate standard system performance when running.
 echo.
-set /p CROWECONTINUE="Are you sure you want to continue (Y\N)? "
+set /p IFCONTINUE="Are you sure you want to continue (Y\N)? "
 
-IF %CROWECONTINUE%==Y ( GOTO ASK )
-IF %CROWECONTINUE%==y ( GOTO ASK )
+IF %IFCONTINUE%==Y ( GOTO ASK )
+IF %IFCONTINUE%==y ( GOTO ASK )
 echo [*] %TIME%: User declined to continue the script, exiting. >> %LOGFILE%
 GOTO END
 :ASK
@@ -44,7 +45,7 @@ echo The group policy management console does not appear to be installed on
 echo this system.  Please run this script on a system which has it installed.
 echo.
 echo Press any key to quit . . .
-echo 
+echo   
 pause > nul
 
 REM RESET COLOR TO SIGNIFY THE SCRIPT IS COMPLETED
@@ -59,24 +60,24 @@ color 0E
 cls
 echo [----------------------------------- SETUP -----------------------------------]
 REM QUESTION TYPE OF DUMP TO PERFORM
-set /p CROWEPWDUMP="Should password hashes be dumped (Y\N)? "
-IF %CROWEPWDUMP%==Y ( GOTO START_DUMPPW )
-IF %CROWEPWDUMP%==y ( GOTO START_DUMPPW )
+set /p PWDUMP="Should password hashes be dumped (Y\N)? "
+IF %PWDUMP%==Y ( GOTO START_DUMPPW )
+IF %PWDUMP%==y ( GOTO START_DUMPPW )
 
 GOTO END_DUMPPW
 :START_DUMPPW
 echo [i] %TIME%: User requested that password hashes be dumped. >> %LOGFILE%
 :END_DUMPPW
 
-set /p CROWECLEANUP="Should DumpIT delete itself when finished (Y/N)? "
+set /p CLEANUP="Should DumpIT delete itself when finished (Y/N)? "
 
 REM Set the color to something better
 color
 
 REM DEFINE VARIABLES
-SET CROWE_DUMP_PATH=%CD%
+SET DUMP_PATH=%CD%
 
-echo [i] %TIME%: Dump path set to "%CROWE_DUMP_PATH%". >> %LOGFILE%
+echo [i] %TIME%: Dump path set to "%DUMP_PATH%". >> %LOGFILE%
 
 REM -------------------------------------------------------------
 REM SETUP
@@ -89,19 +90,19 @@ REM DUMP GROUP POLICY INFORMATION
 REM -------------------------------------------------------------
 echo [--------------------------- DUMPING GROUP POLICY ----------------------------]
 echo [i] %TIME%: Starting group policy dump >> %LOGFILE%
-gpresult /v > "%CROWE_DUMP_PATH%\%computername%_gpresult.txt" | tee -a %LOGFILE%
+gpresult /v > "%DUMP_PATH%\%computername%_gpresult.txt" | tee -a %LOGFILE%
 echo Group policies dumped to gpresult.txt
 
-cscript /nologo "%CROWE_DUMP_PATH%\ListAllGPOs.wsf" > "%CROWE_DUMP_PATH%\%computername%_listall.txt" | tee -a %LOGFILE%
+cscript /nologo "%DUMP_PATH%\ListAllGPOs.wsf" > "%DUMP_PATH%\%computername%_listall.txt" | tee -a %LOGFILE%
 echo GPOs added to listall.txt
 
-cscript /nologo "%CROWE_DUMP_PATH%\FindDisabledGPOs.wsf" > "%CROWE_DUMP_PATH%\%computername%_disabled.txt" | tee -a %LOGFILE%
+cscript /nologo "%DUMP_PATH%\FindDisabledGPOs.wsf" > "%DUMP_PATH%\%computername%_disabled.txt" | tee -a %LOGFILE%
 echo Disabled GPOs added to disabled.txt
 
-cscript /nologo "%CROWE_DUMP_PATH%\FindUnlinkedGPOs.wsf" > "%CROWE_DUMP_PATH%\%computername%_unlinked.txt" | tee -a %LOGFILE%
+cscript /nologo "%DUMP_PATH%\FindUnlinkedGPOs.wsf" > "%DUMP_PATH%\%computername%_unlinked.txt" | tee -a %LOGFILE%
 echo Unliked GPOs added to unlinked.txt
 
-cscript /nologo "%CROWE_DUMP_PATH%\GetReportsForAllGPOs.wsf" "%CROWE_DUMP_PATH%" 2>&1 | tee -a %LOGFILE%
+cscript /nologo "%DUMP_PATH%\GetReportsForAllGPOs.wsf" "%DUMP_PATH%" 2>&1 | tee -a %LOGFILE%
 echo All GPO Reports dumped
 echo [i] %TIME%: Group policy dump done >> %LOGFILE%
 
@@ -109,14 +110,14 @@ REM -------------------------------------------------------------
 REM DUMP PASSWORD HASHES
 REM -------------------------------------------------------------
 REM Did the user tell us to dump passwords?
-IF %CROWEPWDUMP%==Y ( GOTO START_DUMPPW )
-IF %CROWEPWDUMP%==y ( GOTO START_DUMPPW )
+IF %PWDUMP%==Y ( GOTO START_DUMPPW )
+IF %PWDUMP%==y ( GOTO START_DUMPPW )
 
 GOTO END_PW
 :START_DUMPPW
 	echo [---------------------------- DUMPING PASSWORDS ------------------------------]
 	echo [i] %TIME%: Starting ntdsutil >> %LOGFILE%
-	ntdsutil "activate instance ntds" "ifm" "create full """%CROWE_DUMP_PATH%\CroweNTDS"""" "quit" "quit"
+	ntdsutil "activate instance ntds" "ifm" "create full """%DUMP_PATH%\DC_NTDS"""" "quit" "quit"
 	echo ntdsutil done
 		echo [i] %TIME%: ntdsutil done. >> %LOGFILE%
 :END_PW
@@ -127,38 +128,38 @@ REM CREATE ZIP
 REM -------------------------------------------------------------
 echo [---------------------------- CREATING ZIP FILE ------------------------------]
 echo [i] %TIME%: Creating ZIP file, execution complete. >> %LOGFILE%
-"%CROWE_DUMP_PATH%\7z.exe" a -tzip "%CROWE_DUMP_PATH%\DumpIT-%computername%.zip" -x!*.exe -x!*.vbs -x!*.wsf -x!*.js -x!*.cab -x!*.dll -x!*.bat -x!*.zip 2>&1 | tee -a %LOGFILE%
-"%CROWE_DUMP_PATH%\7z.exe" a -tzip "%CROWE_DUMP_PATH%\DumpIT-%computername%.zip" %LOGFILE%
+"%DUMP_PATH%\7z.exe" a -tzip "%DUMP_PATH%\DumpIT-%computername%.zip" -x!*.exe -x!*.vbs -x!*.wsf -x!*.js -x!*.cab -x!*.dll -x!*.bat -x!*.zip 2>&1 | tee -a %LOGFILE%
+"%DUMP_PATH%\7z.exe" a -tzip "%DUMP_PATH%\DumpIT-%computername%.zip" %LOGFILE%
 
-IF %CROWECLEANUP%==Y ( GOTO START_EXECLEAN )
-IF %CROWECLEANUP%==y ( GOTO START_EXECLEAN )
+IF %CLEANUP%==Y ( GOTO START_EXECLEAN )
+IF %CLEANUP%==y ( GOTO START_EXECLEAN )
 
 GOTO END_EXECLEAN
 :START_EXECLEAN
 	REM -------------------------------------------------------------
 	REM CLEAN UP
 	REM -------------------------------------------------------------
-	IF EXIST "%CROWE_DUMP_PATH%\7z.dll" DEL "%CROWE_DUMP_PATH%\7z.dll"
-	IF EXIST "%CROWE_DUMP_PATH%\7z.exe" DEL "%CROWE_DUMP_PATH%\7z.exe"
-	IF EXIST "%CROWE_DUMP_PATH%\tee.exe" DEL "%CROWE_DUMP_PATH%\tee.exe"
-	IF EXIST "%CROWE_DUMP_PATH%\GetReportsForAllGPOs.wsf" DEL "%CROWE_DUMP_PATH%\GetReportsForAllGPOs.wsf"
-	IF EXIST "%CROWE_DUMP_PATH%\Lib_CommonGPMCFunctions.js" DEL "%CROWE_DUMP_PATH%\Lib_CommonGPMCFunctions.js"
-	IF EXIST "%CROWE_DUMP_PATH%\ListAllGPOs.wsf" DEL "%CROWE_DUMP_PATH%\ListAllGPOs.wsf"
-	IF EXIST "%CROWE_DUMP_PATH%\FindDisabledGPOs.wsf" DEL "%CROWE_DUMP_PATH%\FindDisabledGPOs.wsf"
-	IF EXIST "%CROWE_DUMP_PATH%\FindUnlinkedGPOs.wsf" DEL "%CROWE_DUMP_PATH%\FindUnlinkedGPOs.wsf"
-	IF EXIST "%CROWE_DUMP_PATH%\GPOTest.wsf" DEL "%CROWE_DUMP_PATH%\GPOTest.wsf"
+	IF EXIST "%DUMP_PATH%\7z.dll" DEL "%DUMP_PATH%\7z.dll"
+	IF EXIST "%DUMP_PATH%\7z.exe" DEL "%DUMP_PATH%\7z.exe"
+	IF EXIST "%DUMP_PATH%\tee.exe" DEL "%DUMP_PATH%\tee.exe"
+	IF EXIST "%DUMP_PATH%\GetReportsForAllGPOs.wsf" DEL "%DUMP_PATH%\GetReportsForAllGPOs.wsf"
+	IF EXIST "%DUMP_PATH%\Lib_CommonGPMCFunctions.js" DEL "%DUMP_PATH%\Lib_CommonGPMCFunctions.js"
+	IF EXIST "%DUMP_PATH%\ListAllGPOs.wsf" DEL "%DUMP_PATH%\ListAllGPOs.wsf"
+	IF EXIST "%DUMP_PATH%\FindDisabledGPOs.wsf" DEL "%DUMP_PATH%\FindDisabledGPOs.wsf"
+	IF EXIST "%DUMP_PATH%\FindUnlinkedGPOs.wsf" DEL "%DUMP_PATH%\FindUnlinkedGPOs.wsf"
+	IF EXIST "%DUMP_PATH%\GPOTest.wsf" DEL "%DUMP_PATH%\GPOTest.wsf"
 :END_EXECLEAN
 
 REM delete files we zipped
-IF EXIST "%CROWE_DUMP_PATH%\DumpIT-%computername%.zip" DEL "%CROWE_DUMP_PATH%\*.txt"
-IF EXIST "%CROWE_DUMP_PATH%\DumpIT-%computername%.zip" DEL "%CROWE_DUMP_PATH%\*.xml"
-IF EXIST "%CROWE_DUMP_PATH%\DumpIT-%computername%.zip" DEL "%CROWE_DUMP_PATH%\*.html"
-IF EXIST "%CROWE_DUMP_PATH%\DumpIT-%computername%.zip" DEL "%CROWE_DUMP_PATH%\*.log"
+IF EXIST "%DUMP_PATH%\DumpIT-%computername%.zip" DEL "%DUMP_PATH%\*.txt"
+IF EXIST "%DUMP_PATH%\DumpIT-%computername%.zip" DEL "%DUMP_PATH%\*.xml"
+IF EXIST "%DUMP_PATH%\DumpIT-%computername%.zip" DEL "%DUMP_PATH%\*.html"
+IF EXIST "%DUMP_PATH%\DumpIT-%computername%.zip" DEL "%DUMP_PATH%\*.log"
 
 REM clear variables
-SET CROWE_DUMP_PATH=
-SET CROWEPWDUMP=
-SET CROWE64BIT=
+SET DUMP_PATH=
+SET PWDUMP=
+SET 64BIT=
 
 REM -------------------------------------------------------------
 REM COMPLETE
@@ -169,10 +170,9 @@ echo.
 echo [******************************** COMPLETED **********************************]
 echo.
 echo Please check DumpIT-%computername%.zip for the results.
-echo Questions? Please email risklabadmins@crowe.com
 echo.
 echo Press any key to quit . . .
-echo 
+echo   
 pause > nul
 
 REM RESET COLOR TO SIGNIFY THE SCRIPT IS COMPLETED
@@ -180,8 +180,8 @@ cls
 color
 
 REM DELETE THIS BATCH FILE BECAUSE IT IS DONE RUNNING
-IF %CROWECLEANUP%==Y ( GOTO START_BATCLEAN )
-IF %CROWECLEANUP%==y ( GOTO START_BATCLEAN )
+IF %CLEANUP%==Y ( GOTO START_BATCLEAN )
+IF %CLEANUP%==y ( GOTO START_BATCLEAN )
 
 
 GOTO END
@@ -189,4 +189,4 @@ GOTO END
 	DEL DumpDC.bat
 :END
 
-SET CROWECLEANUP=
+SET CLEANUP=
